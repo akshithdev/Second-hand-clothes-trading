@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id           String    @id @default(cuid())
+  name         String?
+  email        String    @unique
+  password     String
+  image        String?
+  phoneNumber  String?
+  gender       String?
+  age          Int?
+  address      String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  role         Role      @default(USER)
+  products     Product[] // Relation to products
+  orders       Order[] // Relation to orders as buyer
+  retailOrders Order[]   @relation("RetailerOrders") // Relation to orders as retailer
+}
+
+// Role enum for user types
+enum Role {
+  USER
+  SELLER
+  ADMIN
+}
+
+// Product model for marketplace items
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  brand       String?
+  price       Float
+  imageUrl    String
+  condition   String?
+  category    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  sellerId    String
+  seller      User        @relation(fields: [sellerId], references: [id])
+  isAvailable Boolean     @default(true)
+  orderItems  OrderItem[]
+}
+
+// Order model
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  retailerId      String
+  retailer        User        @relation("RetailerOrders", fields: [retailerId], references: [id])
+  status          OrderStatus @default(PENDING)
+  totalAmount     Float
+  shippingAddress String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  orderItems      OrderItem[]
+}
+
+// Order item model (for products in an order)
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+}
+
+// Order status enum
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
